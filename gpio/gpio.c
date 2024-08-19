@@ -1,6 +1,7 @@
 #include "gpio.h"
 
-#define BASE_PATH "/sys/class/gpio"
+//#define BASE_PATH "/sys/class/gpio"
+#define BASE_PATH "gpio"
 #define EXP_PATH BASE_PATH "/export"
 #define UNEXP_PATH BASE_PATH "/unexport"
 
@@ -148,7 +149,7 @@ int gpio_get_value(GPIO *gpio)
     if (ret < 0 || ret >= sizeof(valuePath))
     {
         printf("Buffer size too small for value path\n");
-        return NULL;
+        return -1;
     }
 
 
