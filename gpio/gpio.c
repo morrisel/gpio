@@ -1,17 +1,22 @@
 #include "gpio.h"
 
-#define DIRECTION_PATH "direction"
-#define VALUE_PATH "value"
 #define BASE_PATH "/sys/class/gpio"
+#define EXP_PATH BASE_PATH "/export"
+#define UNEXP_PATH BASE_PATH "/unexport"
+
 
 /* gpio_init */
 void gpio_init(GPIO *gpio, int number)
 {
     gpio->number = number;
-    //    snprintf(char *str, size_t size, const char *format, ...);
-    snprintf(gpio->gpioPath, sizeof(gpio->gpioPath), "gpio/gpio%d/", number);
-    //                                                gpio71
+    int ret;
 
+    ret = snprintf(gpio->gpioPath, sizeof(gpio->gpioPath), "%s/gpio%d/", BASE_PATH, number);
+    if (ret < 0 || ret >= sizeof(gpio->gpioPath))
+    {
+        printf("Buffer size too small for gpio path\n");
+        return;
+    }
     gpio_export(gpio);
 }
 
@@ -24,7 +29,7 @@ void gpio_deinit(GPIO *gpio)
 /* gpio_export */
 void gpio_export(GPIO *gpio)
 {
-    FILE *exportFile = fopen("gpio/export", "w");
+    FILE *exportFile = fopen(EXP_PATH, "w");
     if (exportFile)
     {
         fprintf(exportFile, "%d", gpio->number);
@@ -39,7 +44,7 @@ void gpio_export(GPIO *gpio)
 /* gpio_unexport */
 void gpio_unexport(GPIO *gpio)
 {
-    FILE *unexportFile = fopen("gpio/unexport", "w");
+    FILE *unexportFile = fopen(UNEXP_PATH, "w");
     if (unexportFile)
     {
         fprintf(unexportFile, "%d", gpio->number);
@@ -55,7 +60,14 @@ void gpio_unexport(GPIO *gpio)
 void gpio_set_direction(GPIO *gpio, const char *direction)
 {
     char directionPath[256];
-    snprintf(directionPath, sizeof(directionPath), "%s%s", gpio->gpioPath, "direction");
+    int ret;
+
+    ret = snprintf(directionPath, sizeof(directionPath), "%s%s", gpio->gpioPath, "direction");
+    if (ret < 0 || ret >= sizeof(directionPath))
+    {
+        printf("Buffer size too small for direction path\n");
+        return;
+    }
 
     FILE *directionFile = fopen(directionPath, "w");
     if (directionFile)
@@ -73,7 +85,14 @@ void gpio_set_direction(GPIO *gpio, const char *direction)
 void gpio_set_value(GPIO *gpio, int value)
 {
     char valuePath[256];
-    snprintf(valuePath, sizeof(valuePath), "%s%s", gpio->gpioPath, "value");
+    int ret;
+    ret = snprintf(valuePath, sizeof(valuePath), "%s%s", gpio->gpioPath, "value");
+    if (ret < 0 || ret >= sizeof(valuePath))
+    {
+        printf("Buffer size too small for value path\n");
+        return;
+    }
+
 
     FILE *valueFile = fopen(valuePath, "w");
     if (valueFile)
@@ -92,8 +111,15 @@ const char* gpio_get_direction(GPIO *gpio)
 {
     static char direction[16];
     char directionPath[256];
+    int ret;
 
-    snprintf(directionPath, sizeof(directionPath), "%s%s", gpio->gpioPath, "direction");
+    ret = snprintf(directionPath, sizeof(directionPath), "%s%s", gpio->gpioPath, "direction");
+    if (ret < 0 || ret >= sizeof(directionPath))
+    {
+        printf("Buffer size too small for direction path\n");
+        return NULL;
+    }
+
 
     FILE *directionFile = fopen(directionPath, "r");
     if (directionFile)
@@ -117,14 +143,25 @@ const char* gpio_get_direction(GPIO *gpio)
 int gpio_get_value(GPIO *gpio)
 {
     char valuePath[256];
-    snprintf(valuePath, sizeof(valuePath), "%s%s", gpio->gpioPath, "value");
+    int ret;
+    ret = snprintf(valuePath, sizeof(valuePath), "%s%s", gpio->gpioPath, "value");
+    if (ret < 0 || ret >= sizeof(valuePath))
+    {
+        printf("Buffer size too small for value path\n");
+        return NULL;
+    }
+
 
     FILE *valueFile = fopen(valuePath, "r");
     int value = -1;
 
     if (valueFile)
     {
-        fscanf(valueFile, "%d", &value);
+        if (fscanf(valueFile, "%d", &value) != 1)
+        {
+            printf("Error reading value for gpio %d\n", gpio->number);
+            value = -1;
+        }
         fclose(valueFile);
     }
     else
